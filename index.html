@@ -84,6 +84,8 @@
     const Dices = (p) => <SvgIcon {...p}><rect width="12" height="12" x="2" y="10" rx="2" ry="2" /><path d="m17.92 14 3.5-3.5a2.24 2.24 0 0 0 0-3.12l-5.3-5.3a2.24 2.24 0 0 0-3.12 0L9.5 5.58" /><path d="M18 14h.01" /><path d="M15 17h.01" /><path d="M21 17h.01" /><path d="M18 20h.01" /><path d="M15 20h.01" /><path d="M21 20h.01" /></SvgIcon>;
     const Ticket = (p) => <SvgIcon {...p}><path d="m4.5 8 10.58-5.06a1 1 0 0 1 1.34.48L21.38 13.9a1 1 0 0 1-.48 1.34L10.32 20.3a1 1 0 0 1-1.34-.48L4.02 9.34a1 1 0 0 1 .48-1.34Z" /><path d="m13.43 3.6 2.3 4.81" /><path d="m11.43 4.5 2.3 4.81" /><path d="m9.43 5.5 2.3 4.81" /></SvgIcon>;
     const Lightbulb = (p) => <SvgIcon {...p}><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A5 5 0 0 0 8 8c0 1.3.5 2.6 1.5 3.5.8.8 1.3 1.5 1.5 2.5" /><path d="M9 18h6" /><path d="M10 22h4" /></SvgIcon>;
+    const HelpCircle = (p) => <SvgIcon {...p}><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></SvgIcon>;
+    const DoorOpen = (p) => <SvgIcon {...p}><path d="M13 4h3a2 2 0 0 1 2 2v14" /><path d="M2 20h20" /><path d="M13 20V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v16" /><path d="M10 12v.01" /></SvgIcon>;
 
     // ==========================================
     // 單元一：資料的分析 (百分位數 & 盒狀圖)
@@ -753,6 +755,312 @@
       );
     };
 
+    const MontyHallSimulation = () => {
+      const [doors, setDoors] = useState([]);
+      const [selectedDoor, setSelectedDoor] = useState(null);
+      const [openedDoor, setOpenedDoor] = useState(null);
+      const [gameState, setGameState] = useState('select'); // select, decision, reveal
+      const [result, setResult] = useState(null);
+
+      const initGame = () => {
+        const newDoors = ['goat', 'goat', 'goat'];
+        const carIndex = Math.floor(Math.random() * 3);
+        newDoors[carIndex] = 'car';
+        setDoors(newDoors);
+        setSelectedDoor(null);
+        setOpenedDoor(null);
+        setGameState('select');
+        setResult(null);
+      };
+
+      useEffect(() => { initGame(); }, []);
+
+      const handleDoorClick = (index) => {
+        if (gameState !== 'select') return;
+        setSelectedDoor(index);
+
+        const possibleDoorsToOpen = [0, 1, 2].filter(i => i !== index && doors[i] === 'goat');
+        const doorToOpen = possibleDoorsToOpen[Math.floor(Math.random() * possibleDoorsToOpen.length)];
+
+        setTimeout(() => {
+          setOpenedDoor(doorToOpen);
+          setGameState('decision');
+        }, 600);
+      };
+
+      const handleDecision = (type) => {
+        const finalIndex = type === 'stay' ? selectedDoor : [0, 1, 2].find(i => i !== selectedDoor && i !== openedDoor);
+        setGameState('reveal');
+        setResult(doors[finalIndex] === 'car' ? 'win' : 'lose');
+      };
+
+      const getProb = (i) => {
+        if (gameState === 'select') return "1/3";
+        if (gameState === 'decision' || gameState === 'reveal') {
+          if (i === openedDoor) return "0";
+          if (i === selectedDoor) return "1/3";
+          return "2/3";
+        }
+        return "";
+      };
+
+      return (
+        <div className="bg-white p-6 md:p-10 rounded-3xl shadow-sm border border-purple-100 animate-in">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-black text-purple-900 mb-4">三門問題：換還是不換？</h2>
+            <p className="text-slate-600 text-lg">背後藏著一輛跑車與兩隻山羊。選中跑車就算贏！</p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-6 mb-10">
+            {doors.map((content, i) => (
+              <div key={i} className="space-y-3 flex flex-col items-center">
+                <div className={`px-3 py-1 rounded-full text-xs font-black transition-all ${gameState !== 'select' && i !== openedDoor ? 'bg-purple-600 text-white scale-110 shadow-md' : 'bg-slate-100 text-slate-400'}`}>
+                  中獎機率: {getProb(i)}
+                </div>
+                <div
+                  onClick={() => handleDoorClick(i)}
+                  className={`relative w-full h-48 rounded-2xl border-4 transition-all duration-500 cursor-pointer flex items-center justify-center overflow-hidden
+                    ${selectedDoor === i ? 'border-purple-500 bg-purple-50 shadow-inner' : 'border-slate-200 bg-slate-50 hover:border-purple-200'}
+                    ${openedDoor === i || gameState === 'reveal' ? 'bg-white' : ''}
+                    ${openedDoor === i ? 'opacity-50 pointer-events-none' : ''}
+                  `}
+                >
+                  {(openedDoor === i || gameState === 'reveal') ? (
+                    <div className="text-center animate-in zoom-in">
+                      <span className="text-5xl">{content === 'car' ? '🏎️' : '🐐'}</span>
+                      <div className="text-xs font-bold text-slate-400 mt-2 uppercase">{content === 'car' ? '跑車' : '山羊'}</div>
+                    </div>
+                  ) : (
+                    <div className={`text-5xl font-black ${selectedDoor === i ? 'text-purple-500' : 'text-slate-200'}`}>{i + 1}</div>
+                  )}
+                  {selectedDoor === i && gameState === 'select' && (
+                    <div className="absolute top-2 right-2 bg-purple-500 text-white p-1 rounded-full shadow-lg"><CheckCircle2 size={18} /></div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="min-h-[140px] flex flex-col items-center justify-center">
+            {gameState === 'select' && (
+              <div className="bg-purple-50 text-purple-700 px-8 py-4 rounded-2xl font-black text-xl animate-pulse flex items-center gap-3 shadow-sm">
+                <DoorOpen size={24} /> 請點擊其中的一扇門！
+              </div>
+            )}
+
+            {gameState === 'decision' && (
+              <div className="text-center space-y-6 animate-in slide-in-from-bottom-4">
+                <p className="font-bold text-slate-800 text-xl leading-relaxed">
+                  主持人開了第 {openedDoor + 1} 號門，裡面是山羊！<br />
+                  注意機率變化！現在，你要<span className="text-purple-600 underline underline-offset-4 decoration-2">更換</span>你的選擇嗎？
+                </p>
+                <div className="flex gap-6">
+                  <button onClick={() => handleDecision('stay')} className="px-10 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-lg hover:bg-slate-200 transition-all border-b-4 border-slate-300 active:border-b-0 active:translate-y-1">堅持</button>
+                  <button onClick={() => handleDecision('switch')} className="px-10 py-4 bg-purple-600 text-white rounded-2xl font-black text-lg hover:bg-purple-700 transition-all shadow-lg border-b-4 border-purple-800 active:border-b-0 active:translate-y-1">換門</button>
+                </div>
+              </div>
+            )}
+
+            {gameState === 'reveal' && (
+              <div className="text-center space-y-6 animate-in zoom-in">
+                <div className={`text-3xl font-black ${result === 'win' ? 'text-green-600' : 'text-red-500'} drop-shadow-sm`}>
+                  {result === 'win' ? '恭喜！你帶走了跑車！🏆' : '可惜，只有山羊陪你回家...'}
+                </div>
+                <button onClick={initGame} className="flex items-center gap-2 bg-purple-50 text-purple-600 px-6 py-2 rounded-full font-black hover:bg-purple-100 transition-all mx-auto text-lg">
+                  <RefreshCw size={20} /> 再玩一次
+                </button>
+              </div>
+            )}
+          </div>
+
+          {gameState === 'reveal' && (
+            <div className="mt-10 p-8 bg-purple-50 rounded-3xl border border-purple-100 animate-in fade-in shadow-inner">
+              <h3 className="font-black text-purple-900 mb-6 flex items-center gap-3 text-2xl">
+                <span className="bg-white p-2 rounded-full shadow-sm"><Lightbulb size={28} className="text-purple-600" /></span>
+                超簡單破解：為什麼換門比較好？
+              </h3>
+
+              <div className="space-y-8">
+                {/* Analogy 1 */}
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-purple-100">
+                  <h4 className="font-black text-purple-700 mb-3 flex items-center gap-2 text-lg">
+                    💡 直覺算法：除非你一開始就「賽」到跑車
+                  </h4>
+                  <p className="text-slate-600 leading-relaxed text-lg">
+                    你第一次隨便選，選到跑車的機率只有 <strong>1/3</strong>，選到山羊的機率是 <strong>2/3</strong>。<br /><br />
+                    1. 如果你第一次選的是「山羊」，主持人<strong>被迫</strong>幫你開掉另一隻山羊，所以<strong>換門一定會中跑車！</strong><br />
+                    2. 既然你一開始「選到山羊」的機會比較大，那<strong>「換門」會中的機會當然也比較大！</strong>
+                  </p>
+                </div>
+
+                {/* Analogy 2 */}
+                <div className="bg-purple-600 text-white p-6 rounded-2xl shadow-lg transform hover:-translate-y-1 transition-all">
+                  <h4 className="font-black mb-3 text-xl">🚀 終極大圖解：想像有 100 扇門</h4>
+                  <p className="leading-relaxed text-lg opacity-90">
+                    假設有 <strong>100 扇門</strong>，只有 1 扇藏跑車：<br />
+                    1. 你選了 1 號門（中獎率僅 <strong>1%</strong>）。<br />
+                    2. 主持人知道答案，他一口氣幫你打開了剩下 99 扇中的 <strong>98 扇山羊門</strong>。<br />
+                    3. 現在剩下你選的 1 號門，和沒被開掉的 77 號門。<br /><br />
+                    <strong className="text-yellow-300 text-2xl underline">你換不換？</strong> 當然換！因為 77 號門承載了其餘 99% 的幸運能量啊！
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    const ThreePrisonersSimulation = () => {
+      const [step, setStep] = useState(0);
+
+      const getProb = (p) => {
+        if (step === 0) return "1/3";
+        if (step >= 1) {
+          if (p === 'A') return "1/3";
+          if (p === 'B') return "0";
+          if (p === 'C') return "2/3";
+        }
+        return "";
+      };
+
+      return (
+        <div className="bg-white p-6 md:p-10 rounded-3xl shadow-sm border border-purple-100 animate-in">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-black text-purple-900 mb-4">三囚問題：警衛的提示</h2>
+            <p className="text-slate-600 text-lg">這被稱為「三門問題」的文字版。讓我們拆解邏輯。</p>
+          </div>
+
+          <div className="space-y-10">
+            <div className="flex justify-around items-end h-48 border-b border-slate-100 pb-6 relative">
+              {['A', 'B', 'C'].map(p => (
+                <div key={p} className="flex flex-col items-center gap-3 w-1/3">
+                  <div className={`px-3 py-1 rounded-full text-xs font-black transition-all ${step > 0 ? 'bg-purple-600 text-white scale-110 shadow-md' : 'bg-slate-100 text-slate-400'}`}>
+                    獲赦機率: {getProb(p)}
+                  </div>
+                  <div className={`w-20 h-20 rounded-full flex items-center justify-center text-white font-black text-2xl shadow-lg transition-all duration-500 ${p === 'A' ? 'bg-purple-600 ring-8 ring-purple-100' : p === 'B' && step >= 2 ? 'bg-slate-300 opacity-40' : 'bg-slate-400'}`}>
+                    {p}
+                  </div>
+                  <span className="text-sm font-bold text-slate-500">囚犯 {p}</span>
+                  {p === 'B' && step >= 1 && (
+                    <div className="absolute top-1/2 mt-4 text-[10px] bg-red-500 text-white px-2 py-1 rounded font-black animate-bounce shadow-sm">
+                      ❌ 確定處決
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-slate-50 p-8 rounded-3xl min-h-[300px] flex flex-col justify-center shadow-inner border border-slate-100">
+              {step === 0 && (
+                <div className="space-y-6 animate-in fade-in">
+                  <p className="text-slate-700 leading-relaxed text-xl">
+                    三名囚犯 A、B、C，其中一人將獲赦免，兩人處決。目前每人獲赦免機率皆為 <strong className="text-purple-600">1/3</strong>。
+                  </p>
+                  <button onClick={() => setStep(1)} className="w-full bg-purple-600 text-white py-5 rounded-2xl font-black text-xl flex items-center justify-center gap-3 shadow-lg hover:bg-purple-700 transition-all active:scale-95">
+                    A 向警衛打聽消息 <ArrowRight size={24} />
+                  </button>
+                </div>
+              )}
+
+              {step === 1 && (
+                <div className="space-y-6 animate-in slide-in-from-right-4">
+                  <p className="text-slate-600 leading-relaxed italic text-xl">
+                    「警衛，我知道 B 或 C 其中一人必定會被處決，能不能告訴我誰是其中之一？」
+                  </p>
+                  <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-md flex items-center gap-6">
+                    <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center shrink-0 shadow-inner text-2xl">👮</div>
+                    <p className="text-lg font-black text-slate-800">警衛回答：「B 將會被處決。」</p>
+                  </div>
+                  <button onClick={() => setStep(2)} className="w-full bg-purple-600 text-white py-5 rounded-2xl font-black text-xl flex items-center justify-center gap-3 shadow-lg hover:bg-purple-700 transition-all active:scale-95">
+                    A 心想：我的機率提高了？ <ArrowRight size={24} />
+                  </button>
+                </div>
+              )}
+
+              {step === 2 && (
+                <div className="space-y-8 animate-in slide-in-from-right-4">
+                  <div className="bg-purple-100/50 p-6 rounded-2xl border border-purple-200 shadow-sm text-center">
+                    <p className="text-lg text-purple-900 leading-relaxed font-bold">
+                      A 此時非常興奮：B 已確定處決，剩下我和 C 分勝負，所以我的獲赦機率從 <strong className="text-red-500 text-2xl underline decoration-double">1/3 手動變成 1/2</strong> 了！
+                    </p>
+                  </div>
+                  <div className="text-center space-y-6">
+                    <p className="text-red-600 font-black text-4xl drop-shadow-sm">但數學告訴你：錯！</p>
+                    <p className="text-xl text-slate-700 leading-relaxed font-medium">
+                      事實上，A 的機率維持 <strong className="text-purple-600 text-2xl">1/3</strong>，而 C 的獲赦機率竟上升至 <strong className="text-green-600 text-2xl font-black">2/3</strong>！
+                    </p>
+                    <button onClick={() => setStep(3)} className="bg-white border-2 border-purple-200 text-purple-600 font-black px-8 py-3 rounded-full flex items-center gap-2 mx-auto hover:bg-purple-50 transition-all text-lg shadow-sm">
+                      <HelpCircle size={24} /> 揭開條件機率真相
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {step === 3 && (
+                <div className="space-y-8 animate-in zoom-in">
+                  <h3 className="text-2xl font-black text-slate-800 border-b-2 border-slate-200 pb-3 flex items-center gap-2">
+                    <div className="w-2 h-8 bg-purple-600 rounded-full"></div> 為什麼 A 的機率沒變？
+                  </h3>
+
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                      <h4 className="font-black text-purple-700 mb-3 text-lg">🧐 直覺破除：警衛沒說 A</h4>
+                      <p className="text-slate-600 leading-relaxed text-lg">
+                        警衛說「B 會處決」，這是一個關於<strong>其他人</strong>的消息。對於 A 來說，他的基本情況（他是三個人中的一個）並沒有因為聽到別人的八卦而改變。<br /><br />
+                        就像你抽獎沒中，不會影響到遠在天邊的另一個人的中獎率一樣。
+                      </p>
+                    </div>
+
+                    <div className="bg-purple-50 p-6 rounded-2xl border border-purple-100 shadow-sm">
+                      <h4 className="font-black text-purple-900 mb-3 text-lg">⚖️ 機率大遷徙：2/3 的繼承</h4>
+                      <p className="text-purple-800 leading-relaxed text-lg">
+                        原本「B 或 C 其中一人獲赦」的機率是 <strong>2/3</strong>。<br /><br />
+                        當警衛排除掉 B 後，這 <strong>2/3 的好運能量</strong>就全部轉移到了 <strong>C 身上</strong>！因為警衛被禁止提及 A 的命運，所以 A 只能守著他原本的 1/3。
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-800 text-white p-6 rounded-2xl text-center">
+                    <p className="text-xl font-bold italic">「如果不跟你有直接關係的情報被公開，你的原始勝率就不會改變！」</p>
+                  </div>
+
+                  <button onClick={() => setStep(0)} className="text-purple-600 font-black hover:underline mx-auto text-lg mt-4 flex items-center gap-2">
+                    <RefreshCw size={20} /> 再看一次邏輯
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const ParadoxLesson = () => {
+      const [subTab, setSubTab] = useState('monty');
+
+      return (
+        <div className="space-y-6 animate-in">
+          <div className="flex justify-center gap-4 bg-white p-2 rounded-2xl shadow-sm border border-purple-100 max-w-sm mx-auto">
+            <button
+              onClick={() => setSubTab('monty')}
+              className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${subTab === 'monty' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-500 hover:bg-purple-50'}`}
+            >
+              三門問題
+            </button>
+            <button
+              onClick={() => setSubTab('prisoners')}
+              className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${subTab === 'prisoners' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-500 hover:bg-purple-50'}`}
+            >
+              三囚問題
+            </button>
+          </div>
+
+          {subTab === 'monty' ? <MontyHallSimulation /> : <ThreePrisonersSimulation />}
+        </div>
+      );
+    };
+
     const App = () => {
       const [activeTab, setActiveTab] = useState('stats');
 
@@ -782,6 +1090,7 @@
               { id: 'stats', label: '資料分析', sub: '(百分位數)', icon: BarChart3, color: 'emerald' },
               { id: 'draw', label: '抽籤公平性', sub: '(條件機率)', icon: Dices, color: 'indigo' },
               { id: 'scratch', label: '刮刮樂陷阱', sub: '(期望值)', icon: Ticket, color: 'red' },
+              { id: 'paradox', label: '經典悖論', sub: '(機率直覺)', icon: DoorOpen, color: 'purple' },
               { id: 'fun', label: '機率冷知識', sub: '(大數法則)', icon: Lightbulb, color: 'amber' }
             ].map((tab) => (
               <button
@@ -798,10 +1107,11 @@
           </nav>
 
           {/* Content */}
-          <main className="transition-all duration-500">
+          <main className="min-h-[500px]">
             {activeTab === 'stats' && <StatisticsLesson />}
             {activeTab === 'draw' && <DrawLesson />}
             {activeTab === 'scratch' && <ScratchLesson />}
+            {activeTab === 'paradox' && <ParadoxLesson />}
             {activeTab === 'fun' && <FunFactsLesson />}
           </main>
 
